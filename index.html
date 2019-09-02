@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <title>Datafetching from Google Drive</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.0/axios.js"
+    integrity="sha256-XmdRbTre/3RulhYk/cOBUMpYlaAp2Rpo/s556u0OIKk=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.1/build/pure-min.css"
+    integrity="sha384-oAOxQR6DkCoMliIh8yFnu25d7Eq/PHS21PClpwjOTeU2jRSq11vu66rf90/cZr47" crossorigin="anonymous">
+
+  <style>
+    .language-css {
+      user-select: all;
+    }
+
+    .content {
+      margin-left: auto;
+      margin-right: auto;
+      padding-left: 1em;
+      padding-right: 1em;
+      max-width: 768px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app" class="content">
+    <h1 style="text-align: center">Google Sheet Data Fetch</h1>
+    <form class="pure-form pure-form-aligned">
+      <fieldset>
+        <div class="pure-control-group">
+          <label for="sheet_id">Sheet id</label>
+          <input id="sheet_id" v-model="sheet_id">
+          <span class="pure-form-message-inline">(<a
+              href="https://docs.google.com/spreadsheets/d/[sheetid]/edit#gid=xxxx">Example</a>)</span>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <div class="pure-control-group">
+          <label for="api_key">API key</label>
+          <input id="api_key" v-model="api_key">
+          <span class="pure-form-message-inline">(<a
+              href="https://console.developers.google.com/apis/credentials">create here</a>)</span>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <div class="pure-control-group">
+          <label for="ranges">The sheets to fetch data from:</label>
+          <input id="ranges" v-model="ranges">
+          <span class="pure-form-message-inline">(ex: ranges=Sheet1&ranges=Sheet2&ranges=Sheet3)</span>
+        </div>
+      </fieldset>
+
+      <div class="pure-controls">
+        <p><small>Make sure the Google Sheet has share settings of "Everyone with the link can show".</small></p>
+        <button type="button" v-on:click="fetchData" class="pure-button pure-button-primary">Fetch Data</button>
+      </div>
+    </form>
+
+    <section>
+      <div v-if="fetching">Fetching data...</div>
+
+      <div v-if="error">
+        <h3>Something went wrong</h3>
+      </div>
+
+      <div v-if="loaded" class="data">
+        <p>Check your console, or copy data from here:</p>
+        <pre>
+<code class="language-css">
+{{ this.info }}
+</code>
+        </pre>
+      </div>
+
+    </section>
+  </div>
+
+  <script>
+    new Vue({
+      el: '#app',
+      data() {
+        return {
+          info: null,
+          fetching: false,
+          loaded: false,
+          errored: false,
+          sheet_id: 'xxxxxx-xxxxxxxxxxxxxxxx',
+          api_key: 'xxxxxxxxxxxxxxxxxxxxxx-x',
+          ranges: 'ranges=Sheet1&ranges=Sheet2&ranges=Sheet3',
+        }
+      },
+      methods: {
+        fetchData: function () {
+          this.fething = true;
+
+          const SHEET_ID = this.sheet_id;
+          const API_KEY = this.api_key;
+          const RANGES = this.ranges;
+          axios
+            .get(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values:batchGet?${RANGES}&key=${API_KEY}`)
+
+            .then((response) => {
+
+              const data = response.data.valueRanges;
+              const formatedData = data.map(sheet => {
+                let values = sheet.values; // all the values
+                const keys = values.shift(); // remove the first array item, this is the keys for the object
+
+                // map the values to the keys
+                values = values.map(valueWrap => {
+                  let obj = {};
+                  keys.forEach((key, index) => {
+                    let str = valueWrap[index]; // the data from a single cell
+                    const isArray = /[,\/]/g.exec(str);
+                    const isString = /"/g.exec(str); // Wrap a string to prevent a array detection below
+
+                    if (isArray && !isString) {
+                      str = str.split(", ");
+                    }
+                    // Boolean converter (when using google sheets boolean data types )
+                    if (str === 'TRUE') str = true;
+                    if (str === 'FALSE') str = false;
+
+                    obj[key] = str; // add that data to the object
+                  });
+                  return obj;
+                });
+                return {
+                  sheet: sheet.range,
+                  keys: keys,
+                  values: values,
+                }
+              })
+              arrWithAllItems = [];
+              formatedData.forEach(sheet => {
+                arrWithAllItems.push(...sheet.values);
+              });
+              console.log('data', arrWithAllItems);
+
+              this.info = arrWithAllItems;
+            })
+            .catch((error, message) => {
+              console.log(error)
+              this.errored = true
+              this.info = { error: error, message: message };
+            })
+            .finally(() => {
+              this.fething = false;
+              this.loaded = true;
+            })
+        }
+      },
+      mounted() {
+
+      }
+    })
+  </script>
+
+</body>
+
+</html>
