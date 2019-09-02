@@ -1,6 +1,6 @@
 # google-sheet-json-fetcher
 
-A small vue.js app for fetching JSON data in a very opinioated way from Google Sheet
+A small vue.js app for fetching JSON data in a very opinionated way from Google Sheet
 
 Try it out here: https://google-sheet-data.jonassandstedt.now.sh
 
