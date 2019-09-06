@@ -125,6 +125,10 @@
                     if (isArray && !isString) {
                       str = str.split(", ");
                     }
+                    if (isString) {
+                      // remove first and last /" in some strings
+                      str = JSON.parse(str);
+                    }
                     // Boolean converter (when using google sheets boolean data types )
                     if (str === 'TRUE') str = true;
                     if (str === 'FALSE') str = false;
